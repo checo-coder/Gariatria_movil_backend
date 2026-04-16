@@ -100,3 +100,56 @@ export const signup = async (req, res) => {
     clienteBD.release();
   }
 };
+
+
+export const obtenerPerfilCompleto = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 1. Datos del Cliente + Datos de su Geriatra (usando apellidop y apellidom)
+    const usuarioRes = await pool.query(
+      `SELECT c.id_cliente, c.nombre, c.apellidop, c.apellidom, c.correo, c.rol, c.fecha_de_nacimiento,
+              g.nombre as nombre_geriatra, 
+              g.apellidop as apellidop_geriatra, 
+              g.apellidom as apellidom_geriatra, 
+              g.cedula as cedula_geriatra
+       FROM clientes c
+       LEFT JOIN geriatras g ON c.id_geriatra = g.id_geriatra
+       WHERE c.id_cliente = $1`,
+      [id]
+    );
+
+    if (usuarioRes.rows.length === 0) {
+      return res.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+
+    const usuario = usuarioRes.rows[0];
+
+    // Cálculo de edad
+    if (usuario.fecha_de_nacimiento) {
+      const hoy = new Date();
+      const cumple = new Date(usuario.fecha_de_nacimiento);
+      let edad = hoy.getFullYear() - cumple.getFullYear();
+      if (hoy.getMonth() < cumple.getMonth() || (hoy.getMonth() === cumple.getMonth() && hoy.getDate() < cumple.getDate())) {
+        edad--;
+      }
+      usuario.edad = edad;
+    }
+
+    // 2. Vínculo (Cuidador <-> Paciente) en tabla asignacion
+    let queryVinculo = usuario.rol === 'cuidador' 
+      ? `SELECT c.nombre, c.apellidop, c.apellidom, c.correo FROM asignacion a JOIN clientes c ON a.id_paciente = c.id_cliente WHERE a.id_cuidador = $1`
+      : `SELECT c.nombre, c.apellidop, c.apellidom, c.correo FROM asignacion a JOIN clientes c ON a.id_cuidador = c.id_cliente WHERE a.id_paciente = $1`;
+
+    const vinculoRes = await pool.query(queryVinculo, [id]);
+    
+    res.json({
+      usuario,
+      vinculo: vinculoRes.rows[0] || null
+    });
+
+  } catch (error) {
+    console.error("Error al obtener perfil completo:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
+  }
+};

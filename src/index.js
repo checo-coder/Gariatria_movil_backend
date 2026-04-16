@@ -15,6 +15,7 @@ import medsRoutes from "./routes/medsRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import gpsRoutes from "./routes/gpsRoutes.js";
 import citasRoutes from "./routes/citasRoutes.js";
+import reportesRoutes from "./routes/reportesRoutes.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -36,6 +37,7 @@ app.use("/api/meds", medsRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/gps", gpsRoutes);
 app.use("/api/citas", citasRoutes);
+app.use("/api/reportes", reportesRoutes);
 
 // --- 4. RUTAS DE UTILIDAD (Interacción con Hardware/Notificaciones) ---
 
